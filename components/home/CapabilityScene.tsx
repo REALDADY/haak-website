@@ -1,3 +1,8 @@
+import CountUp from '@/components/motion/CountUp'
+import ScrollWords from '@/components/motion/ScrollWords'
+import { Reveal, RevealGroup, RevealItem } from '@/components/motion/Reveal'
+import { servicePillars, services, workflow } from '@/lib/site-data'
+
 const principles = [
   {
     title: 'Model the business first',
@@ -13,36 +18,70 @@ const principles = [
   },
 ]
 
+// Counts derived from existing site content so they never drift from the real offer.
+const facts = [
+  { value: services.length, label: 'Service disciplines under one delivery team' },
+  { value: servicePillars.length, label: 'Pillars: products, growth and operations' },
+  { value: workflow.length, label: 'Stages from discovery to improvement' },
+]
+
 export default function CapabilityScene() {
   return (
-    <section id="solutions" className="brand-thesis bg-[var(--surface-dark)] px-4 py-20 text-white sm:px-6 lg:px-8 lg:py-28">
-      <div className="mx-auto max-w-7xl">
-        <div className="grid gap-12 lg:grid-cols-[0.9fr_1.1fr] lg:items-start">
-          <div>
-            <div className="section-kicker is-dark">Solutions</div>
-            <h2 className="max-w-4xl font-display text-[clamp(2.35rem,4.4vw,4.7rem)] font-extrabold leading-[0.98] text-white">
+    <section id="solutions" className="theme-dark noise section relative overflow-hidden">
+      <div className="hairline-top" aria-hidden="true" />
+      <div aria-hidden="true" className="glow-orb glow-cyan -left-60 top-1/3 h-[40rem] w-[40rem] opacity-60" />
+
+      <div className="container-x relative z-[1]">
+        <div className="grid gap-12 lg:grid-cols-[0.8fr_1.2fr] lg:gap-20">
+          <Reveal className="lg:sticky lg:top-32 lg:self-start">
+            <p className="eyebrow">Solutions</p>
+            <h2 className="t-h2 mt-5 max-w-[14ch] text-balance">
               HAAK turns business requirements into useful digital systems.
             </h2>
-          </div>
-          <div className="brand-thesis-copy">
-            <p>
-              A stronger website or application is rarely just a visual layer. It needs the right structure, journeys, content, engineering decisions and support path.
-            </p>
-            <p>
-              HAAK’s role is to connect those decisions so the result can be used by real customers, teams and operators.
-            </p>
+          </Reveal>
+
+          <div>
+            <ScrollWords
+              className="font-display text-[clamp(1.45rem,2.5vw,2.2rem)] font-semibold leading-[1.3] tracking-[-0.02em] text-white"
+              text="A stronger website or application is rarely just a visual layer. It needs the right structure, journeys, content, engineering decisions and support path."
+            />
+            <Reveal delay={0.05}>
+              <p className="t-lead mt-8 max-w-2xl">
+                HAAK’s role is to connect those decisions so the result can be used by real customers, teams and operators.
+              </p>
+            </Reveal>
+
+            <RevealGroup as="ol" className="mt-14 border-t border-white/10">
+              {principles.map((principle, index) => (
+                <RevealItem
+                  as="li"
+                  key={principle.title}
+                  className="group grid gap-3 border-b border-white/10 py-7 sm:grid-cols-[4rem_1fr] sm:gap-6"
+                >
+                  <span className="index-num pt-1.5">{String(index + 1).padStart(2, '0')}</span>
+                  <div className="grid gap-3 md:grid-cols-[0.9fr_1.1fr] md:gap-8">
+                    <h3 className="t-h3 transition-colors duration-300 group-hover:text-[var(--brand-logo-cyan)]">
+                      {principle.title}
+                    </h3>
+                    <p className="t-body">{principle.copy}</p>
+                  </div>
+                </RevealItem>
+              ))}
+            </RevealGroup>
           </div>
         </div>
 
-        <div className="principle-rail mt-14">
-          {principles.map((principle, index) => (
-            <article key={principle.title}>
-              <span>{String(index + 1).padStart(2, '0')}</span>
-              <h3>{principle.title}</h3>
-              <p>{principle.copy}</p>
-            </article>
+        <RevealGroup as="dl" className="mt-20 grid gap-px overflow-hidden rounded-[var(--radius-lg)] border border-white/10 bg-white/10 sm:grid-cols-3">
+          {facts.map((fact) => (
+            <RevealItem key={fact.label} className="bg-[var(--surface-dark)] p-7 sm:p-8">
+              <dt className="sr-only">{fact.label}</dt>
+              <dd className="font-display text-[clamp(3rem,6vw,4.75rem)] font-bold leading-none tracking-[-0.05em] text-white">
+                <CountUp value={fact.value} />
+              </dd>
+              <dd className="mt-3 max-w-[16rem] text-sm leading-relaxed text-white/70">{fact.label}</dd>
+            </RevealItem>
           ))}
-        </div>
+        </RevealGroup>
       </div>
     </section>
   )

@@ -3,23 +3,17 @@
 import { useMemo, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
-import AnimateIn from '@/components/AnimateIn'
+import { AnimatePresence, LayoutGroup, m } from 'framer-motion'
+import PageHero from '@/components/ui/PageHero'
+import CtaBand from '@/components/ui/CtaBand'
+import { ArrowRightIcon, ArrowUpRightIcon } from '@/components/icons'
+import { duration, ease, spring } from '@/lib/motion'
 import { projects } from '@/lib/site-data'
 
 const baseFilters = ['All']
 
-function ArrowIcon() {
-  return (
-    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M17.25 8.25L21 12m0 0l-3.75 3.75M21 12H3" />
-    </svg>
-  )
-}
-
 export default function PortfolioClient() {
   const [activeFilter, setActiveFilter] = useState('All')
-  const reduceMotion = useReducedMotion()
 
   const filters = useMemo(() => {
     const unique = new Set<string>()
@@ -36,161 +30,181 @@ export default function PortfolioClient() {
 
   return (
     <>
-      <section className="section-shell bg-[var(--bg-soft)] pb-14 pt-20">
-        <div className="mx-auto max-w-7xl">
-          <div className="grid gap-8 lg:grid-cols-[1fr_0.88fr] lg:items-end">
-            <AnimateIn>
-              <div>
-                <span className="section-label">Work</span>
-                <h1 className="mt-4 max-w-4xl font-display text-4xl font-extrabold leading-[1.05] text-[var(--text-primary)] sm:text-5xl lg:text-6xl">
-                  Websites, storefronts and digital interfaces from HAAK project work.
-                </h1>
-                <p className="mt-6 max-w-2xl text-lg leading-relaxed text-[var(--text-soft)]">
-                  Browse real project names, screenshots, service categories, and delivery notes. Outcomes focus on visible scope and delivered systems.
-                </p>
-              </div>
-            </AnimateIn>
-
-            <AnimateIn delay={0.08}>
-              <div className="surface-card rounded-[28px] p-6">
-                <p className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--brand-primary-hover)]">
-                  Project library
-                </p>
-                <p className="mt-3 text-sm leading-relaxed text-[var(--text-soft)]">
-                  The current portfolio includes available screenshots for landscaping/e-commerce, water ordering, and consumer-brand web presentation.
-                </p>
-              </div>
-            </AnimateIn>
-          </div>
-
-          <AnimateIn delay={0.1}>
-            <div className="mt-10 flex flex-wrap gap-2">
-              {filters.map((filter) => (
-                <button
-                  key={filter}
-                  onClick={() => setActiveFilter(filter)}
-                  className={`rounded-full border px-4 py-2 text-sm font-bold transition ${
-                    activeFilter === filter
-                      ? 'border-[var(--brand-primary-hover)] bg-[var(--brand-primary-hover)] text-white'
-                      : 'border-[var(--line)] bg-white text-[var(--text-soft)] hover:border-[var(--line-strong)] hover:text-[var(--text-primary)]'
-                  }`}
-                >
-                  {filter}
-                </button>
+      <PageHero
+        eyebrow="Work"
+        title="Websites, storefronts and digital interfaces from HAAK project work."
+        highlightLast={4}
+        intro={
+          <p>
+            Browse real project names, screenshots, service categories, and delivery notes. Outcomes focus on visible scope and delivered systems.
+          </p>
+        }
+        aside={
+          <div className="card p-6 sm:p-8">
+            <p className="t-label">Project library</p>
+            <p className="mt-4 text-[0.95rem] leading-relaxed text-white/70">
+              The current portfolio includes available screenshots for landscaping/e-commerce, water ordering, and consumer-brand web presentation.
+            </p>
+            <ul className="mt-6 grid gap-2 border-t border-white/10 pt-6">
+              {projects.map((project, index) => (
+                <li key={project.slug} className="flex items-baseline justify-between gap-4 text-sm">
+                  <span className="flex items-baseline gap-3 font-semibold text-white">
+                    <span className="index-num">{String(index + 1).padStart(2, '0')}</span>
+                    {project.client}
+                  </span>
+                  <span className="text-right text-white/60">{project.industry}</span>
+                </li>
               ))}
-            </div>
-          </AnimateIn>
-        </div>
-      </section>
+            </ul>
+          </div>
+        }
+      />
 
-      <section className="section-shell">
-        <div className="mx-auto max-w-7xl">
-          {filteredProjects.length === 0 ? (
-            <div className="surface-card rounded-[28px] p-10 text-center">
-              <p className="text-[var(--text-soft)]">No projects match that filter.</p>
-            </div>
-          ) : (
-            <motion.div layout className="space-y-8">
-              <AnimatePresence mode="popLayout">
-                {filteredProjects.map((project, index) => (
-                  <motion.article
-                    key={project.client}
-                    layout
-                    initial={reduceMotion ? false : { opacity: 0, y: 18 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={reduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.98 }}
-                    transition={{ duration: 0.28, delay: index * 0.03 }}
-                    className="surface-card project-story overflow-hidden rounded-[30px]"
+      <section className="section surface-soft !pt-12 sm:!pt-16" aria-label="Projects">
+        <div className="container-x">
+          <LayoutGroup>
+            <div
+              role="group"
+              aria-label="Filter projects by service"
+              className="flex flex-wrap items-center gap-2 rounded-full sm:inline-flex sm:border sm:border-[var(--line)] sm:bg-white sm:p-1.5 sm:shadow-[var(--shadow-sm)]"
+            >
+              {filters.map((filter) => {
+                const selected = activeFilter === filter
+                return (
+                  <button
+                    key={filter}
+                    type="button"
+                    aria-pressed={selected}
+                    onClick={() => setActiveFilter(filter)}
+                    className={`relative z-0 min-h-11 rounded-full border px-5 text-sm font-bold transition-colors duration-300 sm:border-transparent ${
+                      selected
+                        ? 'border-[var(--brand-secondary)] text-white'
+                        : 'border-[var(--line)] bg-white text-[var(--text-soft)] hover:text-[var(--text-primary)] sm:bg-transparent'
+                    }`}
                   >
-                    <div className="grid gap-0 xl:grid-cols-[1.05fr_0.95fr]">
+                    {selected && (
+                      <m.span
+                        layoutId="portfolio-filter-pill"
+                        aria-hidden="true"
+                        className="absolute inset-0 -z-10 rounded-full bg-[var(--brand-secondary)]"
+                        transition={spring.snappy}
+                      />
+                    )}
+                    {filter}
+                  </button>
+                )
+              })}
+            </div>
+          </LayoutGroup>
+          <p className="sr-only" aria-live="polite">
+            {`${filteredProjects.length} ${filteredProjects.length === 1 ? 'project' : 'projects'} shown`}
+          </p>
+
+          <m.ul layout className="mt-10 grid gap-6">
+            <AnimatePresence mode="popLayout" initial={false}>
+              {filteredProjects.map((project, index) => (
+                <m.li
+                  key={project.slug}
+                  layout
+                  initial={{ opacity: 0, y: 24 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.98, transition: { duration: duration.fast } }}
+                  transition={{ duration: duration.slow, ease: ease.out, delay: index * 0.04 }}
+                >
+                  <article className="card card-interactive group overflow-hidden bg-white shadow-[var(--shadow-sm)]">
+                    <div className={`grid lg:grid-cols-[1.15fr_1fr] ${index % 2 === 1 ? 'lg:[&>*:first-child]:order-2' : ''}`}>
                       <Link
                         href={project.href}
-                        aria-label={`View ${project.client} project`}
-                        className="project-media-mask relative min-h-[320px] overflow-hidden bg-[var(--bg-soft)] sm:min-h-[430px] xl:min-h-full"
+                        tabIndex={-1}
+                        className="relative block overflow-hidden bg-[var(--bg-soft)] p-4 sm:p-6 lg:p-8"
                       >
-                        <motion.div whileHover={reduceMotion ? undefined : { scale: 1.025 }} transition={{ duration: 0.45 }} className="absolute inset-0">
-                          <Image
-                            src={project.image}
-                            alt={project.imageAlt}
-                            fill
-                            className="object-cover"
-                            sizes="(max-width: 1279px) 100vw, 52vw"
-                          />
-                        </motion.div>
+                        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,rgba(0,180,216,0.16),transparent_60%)]" />
+                        <div className="browser-frame relative">
+                          <div className="browser-bar">
+                            <i />
+                            <i />
+                            <i />
+                          </div>
+                          <div className="relative aspect-[16/10] overflow-hidden">
+                            <Image
+                              src={project.image}
+                              alt={project.imageAlt}
+                              fill
+                              quality={90}
+                              priority={index === 0}
+                              className="object-cover object-top transition-transform duration-[900ms] ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:scale-[1.04]"
+                              sizes="(max-width: 1024px) 100vw, 680px"
+                            />
+                            <div className="absolute inset-0 flex items-center justify-center bg-[rgba(0,8,20,0)] transition-colors duration-500 group-hover:bg-[rgba(0,8,20,0.3)]">
+                              <span aria-hidden="true" className="flex translate-y-3 items-center gap-2 rounded-full bg-white px-5 py-3 text-sm font-bold text-[var(--brand-secondary)] opacity-0 shadow-lg transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:translate-y-0 group-hover:opacity-100">
+                                View case study
+                                <ArrowUpRightIcon className="h-4 w-4" />
+                              </span>
+                            </div>
+                          </div>
+                        </div>
                       </Link>
 
-                      <div className="p-6 sm:p-8 lg:p-10">
-                        <p className="text-sm font-bold uppercase tracking-[0.14em] text-[var(--brand-primary-hover)]">
-                          {project.industry}
-                        </p>
-                        <h2 className="mt-3 font-display text-3xl font-extrabold text-[var(--text-primary)]">
+                      <div className="flex flex-col p-7 sm:p-10">
+                        <div className="flex items-center justify-between gap-4">
+                          <p className="t-label">{project.industry}</p>
+                          <span className="index-num text-[var(--text-faint)]">{String(index + 1).padStart(2, '0')}</span>
+                        </div>
+                        <h2 className="mt-3 font-display text-[clamp(1.9rem,3.2vw,2.75rem)] font-bold leading-[1.05] tracking-[-0.035em] text-[var(--text-primary)]">
                           {project.client}
                         </h2>
-                        <p className="mt-4 text-base leading-relaxed text-[var(--text-soft)]">
-                          {project.summary}
-                        </p>
+                        <p className="t-body mt-4">{project.summary}</p>
 
-                        <div className="mt-6 grid gap-4 sm:grid-cols-2">
-                          <div className="rounded-2xl border border-[var(--line)] bg-[var(--bg-soft)] p-5">
-                            <p className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--brand-primary-hover)]">
-                              Challenge
-                            </p>
-                            <p className="mt-3 text-sm leading-relaxed text-[var(--text-soft)]">
-                              {project.challenge}
-                            </p>
+                        <dl className="mt-6 grid gap-3 sm:grid-cols-2">
+                          <div className="rounded-2xl bg-[var(--bg-soft)] p-5">
+                            <dt className="t-label">Challenge</dt>
+                            <dd className="mt-2 text-sm leading-relaxed text-[var(--text-soft)]">{project.challenge}</dd>
                           </div>
-                          <div className="rounded-2xl border border-[var(--line)] bg-white p-5">
-                            <p className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--brand-primary-hover)]">
-                              HAAK role
-                            </p>
-                            <p className="mt-3 text-sm leading-relaxed text-[var(--text-soft)]">
-                              {project.role}
-                            </p>
+                          <div className="rounded-2xl border border-[var(--line)] p-5">
+                            <dt className="t-label">HAAK role</dt>
+                            <dd className="mt-2 text-sm leading-relaxed text-[var(--text-soft)]">{project.role}</dd>
                           </div>
-                        </div>
+                        </dl>
 
-                        <div className="mt-6 flex flex-wrap gap-2">
+                        <ul className="mt-6 flex flex-wrap gap-2" aria-label="Services">
                           {project.services.map((service) => (
-                            <span key={service} className="rounded-full border border-[var(--line)] bg-[var(--bg-soft)] px-3 py-1.5 text-xs font-bold text-[var(--text-soft)]">
+                            <li key={service} className="chip">
                               {service}
-                            </span>
+                            </li>
                           ))}
-                        </div>
+                        </ul>
 
-                        <Link href={project.href} className="button-primary mt-8">
-                          View project
-                          <ArrowIcon />
-                        </Link>
+                        <div className="mt-auto flex flex-wrap items-center gap-x-6 gap-y-3 pt-8">
+                          <Link href={project.href} className="btn-primary">
+                            View project
+                            <span className="sr-only">: {project.client}</span>
+                            <ArrowRightIcon />
+                          </Link>
+                        </div>
                       </div>
                     </div>
-                  </motion.article>
-                ))}
-              </AnimatePresence>
-            </motion.div>
+                  </article>
+                </m.li>
+              ))}
+            </AnimatePresence>
+          </m.ul>
+
+          {filteredProjects.length === 0 && (
+            <div className="card mt-10 p-10 text-center">
+              <p className="text-[var(--text-soft)]">No projects match that filter.</p>
+            </div>
           )}
         </div>
       </section>
 
-      <section className="section-shell bg-[var(--bg-soft)]">
-        <div className="mx-auto max-w-5xl rounded-[30px] bg-[var(--surface-dark)] px-6 py-10 text-center text-white sm:px-10 sm:py-14">
-          <span className="section-label">Build the next project</span>
-          <h2 className="font-display text-3xl font-extrabold leading-tight sm:text-5xl">
-            Need a website, application, storefront or platform with a clearer user journey?
-          </h2>
-          <p className="mx-auto mt-5 max-w-2xl text-base leading-relaxed text-white/72">
-            Share the current product or website challenge and HAAK can help define the practical next step.
-          </p>
-          <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-            <Link href="/contact" className="button-primary">
-              Start a Project
-              <ArrowIcon />
-            </Link>
-            <Link href="/services" className="button-secondary">
-              Explore Services
-            </Link>
-          </div>
-        </div>
-      </section>
+      <CtaBand
+        className="bg-white"
+        eyebrow="Build the next project"
+        title="Need a website, application, storefront or platform with a clearer user journey?"
+        copy="Share the current product or website challenge and HAAK can help define the practical next step."
+        primary={{ href: '/contact', label: 'Start a Project' }}
+        secondary={{ href: '/services', label: 'Explore Services' }}
+      />
     </>
   )
 }

@@ -5,6 +5,8 @@ import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
 import WhatsAppFloat from '@/components/WhatsAppFloat'
 import Preloader from '@/components/Preloader'
+import MotionProvider from '@/components/motion/MotionProvider'
+import { introScript } from '@/lib/intro'
 import { companyInfo } from '@/lib/site-data'
 
 const manrope = Manrope({
@@ -105,19 +107,27 @@ const structuredData = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${manrope.variable} ${sora.variable}`}>
+    <html lang="en" className={`${manrope.variable} ${sora.variable}`} suppressHydrationWarning>
       <head>
+        <script dangerouslySetInnerHTML={{ __html: introScript }} />
+        <noscript>
+          <style>{'[data-reveal]{opacity:1!important;transform:none!important}'}</style>
+        </noscript>
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
         />
       </head>
       <body className="min-h-screen overflow-x-hidden bg-[var(--bg)] text-[var(--text-primary)] antialiased">
-        <Preloader />
-        <Navbar />
-        <main id="main">{children}</main>
-        <Footer />
-        <WhatsAppFloat />
+        <MotionProvider>
+          <Preloader />
+          <Navbar />
+          <main id="main" tabIndex={-1} className="outline-none">
+            {children}
+          </main>
+          <Footer />
+          <WhatsAppFloat />
+        </MotionProvider>
         {/* Google Analytics 4 - replace G-XXXXXXXXXX with your Measurement ID */}
         {/* <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX" /> */}
         {/* Meta Pixel - replace YOUR_PIXEL_ID */}

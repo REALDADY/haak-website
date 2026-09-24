@@ -1,80 +1,74 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
-const SESSION_KEY = 'haak-loader-seen'
+// The intro is CSS-driven and gated by `has-intro`, set before first paint by lib/intro.ts.
+
+const letters = ['H', 'A', 'A', 'K']
 
 export default function Preloader() {
-  const reduceMotion = useReducedMotion()
-  const [visible, setVisible] = useState(false)
+  const [active, setActive] = useState(true)
+  const finishedRef = useRef(false)
+
+  const finish = useCallback(() => {
+    if (finishedRef.current) return
+    finishedRef.current = true
+    document.documentElement.classList.remove('has-intro', 'intro-skip')
+    setActive(false)
+  }, [])
+
+  const skip = useCallback(() => {
+    document.documentElement.classList.add('intro-skip')
+    window.setTimeout(finish, 280)
+  }, [finish])
 
   useEffect(() => {
-    if (reduceMotion || sessionStorage.getItem(SESSION_KEY) === '1') {
-      setVisible(false)
+    if (!document.documentElement.classList.contains('has-intro')) {
+      setActive(false)
       return
     }
 
-    setVisible(true)
-    const timer = window.setTimeout(() => {
-      sessionStorage.setItem(SESSION_KEY, '1')
-      setVisible(false)
-    }, 900)
-
-    const hardStop = window.setTimeout(() => {
-      sessionStorage.setItem(SESSION_KEY, '1')
-      setVisible(false)
-    }, 1400)
-
-    return () => {
-      window.clearTimeout(timer)
-      window.clearTimeout(hardStop)
+    const fallback = window.setTimeout(finish, 2000)
+    const handleKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') skip()
     }
-  }, [reduceMotion])
+    window.addEventListener('keydown', handleKey)
+    return () => {
+      window.clearTimeout(fallback)
+      window.removeEventListener('keydown', handleKey)
+    }
+  }, [finish, skip])
+
+  if (!active) return null
 
   return (
-    <AnimatePresence>
-      {visible && (
-        <motion.div
-          className="fixed inset-0 z-[100] grid place-items-center overflow-hidden bg-[var(--bg)]"
-          initial={{ opacity: 1 }}
-          exit={{ y: '-100%', transition: { duration: 0.48, ease: [0.76, 0, 0.24, 1] } }}
-          aria-label="Loading HAAK Solutions"
-          role="status"
-        >
-          <div className="relative flex flex-col items-center gap-8">
-            <div className="relative h-24 w-24">
-              <motion.span
-                className="absolute left-3 top-3 h-7 w-12 origin-bottom-left rounded-[8px] bg-[var(--brand-accent)]"
-                initial={{ x: -28, y: 18, rotate: -36, opacity: 0 }}
-                animate={{ x: 0, y: 0, rotate: -24, opacity: 1 }}
-                transition={{ duration: 0.45, ease: [0.22, 0.8, 0.28, 1] }}
-              />
-              <motion.span
-                className="absolute left-8 top-6 h-12 w-11 origin-center rounded-[9px] bg-[var(--brand-primary)]"
-                initial={{ scale: 0.78, rotate: 42, opacity: 0 }}
-                animate={{ scale: 1, rotate: 18, opacity: 1 }}
-                transition={{ duration: 0.48, delay: 0.08, ease: [0.22, 0.8, 0.28, 1] }}
-              />
-              <motion.span
-                className="absolute bottom-3 right-5 h-8 w-12 origin-top-right rounded-[8px] bg-[var(--brand-secondary)]"
-                initial={{ x: 26, y: -16, rotate: 36, opacity: 0 }}
-                animate={{ x: 0, y: 0, rotate: -22, opacity: 1 }}
-                transition={{ duration: 0.45, delay: 0.14, ease: [0.22, 0.8, 0.28, 1] }}
-              />
-            </div>
-            <div className="h-1.5 w-48 overflow-hidden rounded-full bg-[var(--surface-soft)]">
-              <motion.div
-                className="h-full rounded-full bg-[var(--brand-primary-hover)]"
-                initial={{ width: '0%' }}
-                animate={{ width: '100%' }}
-                transition={{ duration: 0.9, ease: [0.22, 0.8, 0.28, 1] }}
-              />
-            </div>
-            <span className="sr-only">Loading HAAK Solutions</span>
-          </div>
-        </motion.div>
-      )}
-    </AnimatePresence>
+    <div
+      className="preloader theme-dark"
+      onAnimationEnd={(event) => {
+        if (event.target === event.currentTarget) finish()
+      }}
+    >
+      <div className="grid-lines" aria-hidden="true" />
+      <div className="relative flex flex-col items-center gap-6" aria-hidden="true">
+        <p className="flex overflow-hidden font-display text-[clamp(3.5rem,12vw,7rem)] font-extrabold leading-none tracking-[-0.05em] text-white">
+          {letters.map((letter, index) => (
+            <span key={index} className="preloader-letter" style={{ '--i': index } as React.CSSProperties}>
+              {letter}
+            </span>
+          ))}
+        </p>
+        <span className="block h-[2px] w-40 overflow-hidden rounded-full bg-white/10">
+          <span className="preloader-bar block h-full w-full bg-gradient-to-r from-[var(--brand-primary)] to-[var(--brand-accent)]" />
+        </span>
+        <span className="text-xs font-semibold uppercase tracking-[0.32em] text-white/60">Solutions</span>
+      </div>
+      <button
+        type="button"
+        onClick={skip}
+        className="absolute bottom-6 right-6 min-h-11 rounded-full border border-white/20 px-5 text-sm font-semibold text-white/80 transition-colors hover:border-white/50 hover:text-white"
+      >
+        Skip intro
+      </button>
+    </div>
   )
 }

@@ -3,63 +3,118 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useEffect, useRef, useState } from 'react'
-import { AnimatePresence, motion } from 'framer-motion'
-import { companyInfo, services } from '@/lib/site-data'
+import { useCallback, useEffect, useId, useRef, useState } from 'react'
+import {
+  AnimatePresence,
+  m,
+  useMotionValueEvent,
+  useReducedMotion,
+  useScroll,
+  useSpring,
+} from 'framer-motion'
+import { companyInfo, services, whatsappLinks } from '@/lib/site-data'
+import { duration, ease, hasFinePointer, spring, springConfig, stagger } from '@/lib/motion'
+import { ArrowRightIcon, ArrowUpRightIcon, ChevronDownIcon } from '@/components/icons'
+import Magnetic from '@/components/motion/Magnetic'
 
 const navLinks = [
-  { href: '/services', label: 'Services' },
   { href: '/#solutions', label: 'Solutions' },
   { href: '/portfolio', label: 'Work' },
   { href: '/about', label: 'About' },
   { href: '/contact', label: 'Contact' },
 ]
 
+const mobileLinks = [{ href: '/services', label: 'Services' }, ...navLinks]
+
 function isLinkActive(pathname: string, href: string) {
+  if (href.includes('#')) return false
   return pathname === href || pathname.startsWith(`${href}/`)
 }
 
+const focusableSelector = 'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])'
+
 export default function Navbar() {
-  const pathname = usePathname()
-  const currentPath = pathname ?? '/'
+  const pathname = usePathname() ?? '/'
+  const reduceMotion = useReducedMotion()
   const [isOpen, setIsOpen] = useState(false)
   const [servicesOpen, setServicesOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
-  const headerRef = useRef<HTMLDivElement>(null)
+  const [hidden, setHidden] = useState(false)
+  const headerRef = useRef<HTMLElement>(null)
   const menuButtonRef = useRef<HTMLButtonElement>(null)
-  const drawerRef = useRef<HTMLDivElement>(null)
-  const openedOnceRef = useRef(false)
+  const servicesButtonRef = useRef<HTMLButtonElement>(null)
+  const sheetRef = useRef<HTMLDivElement>(null)
+  const hoverTimer = useRef<number>()
+  const wasOpen = useRef(false)
+  const megaId = useId()
+  const sheetId = useId()
 
-  useEffect(() => {
-    const handleScroll = () => setScrolled(window.scrollY > 12)
-    handleScroll()
-    window.addEventListener('scroll', handleScroll, { passive: true })
-    return () => window.removeEventListener('scroll', handleScroll)
-  }, [])
+  const { scrollY, scrollYProgress } = useScroll()
+  const progress = useSpring(scrollYProgress, springConfig.progress)
 
+  useMotionValueEvent(scrollY, 'change', (latest) => {
+    const previous = scrollY.getPrevious() ?? 0
+    setScrolled(latest > 16)
+    if (isOpen || servicesOpen) return
+    if (latest > previous + 4 && latest > 280) setHidden(true)
+    else if (latest < previous - 4 || latest < 280) setHidden(false)
+  })
+
+  // Close menus on route change.
   useEffect(() => {
     setIsOpen(false)
     setServicesOpen(false)
+    setHidden(false)
   }, [pathname])
 
+  // Mobile sheet: scroll lock, initial focus, focus return.
   useEffect(() => {
-    document.body.style.overflow = isOpen ? 'hidden' : ''
+    const root = document.documentElement
     if (isOpen) {
-      openedOnceRef.current = true
-      window.setTimeout(() => drawerRef.current?.querySelector<HTMLElement>('a,button')?.focus(), 80)
-    } else if (openedOnceRef.current) {
+      wasOpen.current = true
+      root.style.overflow = 'hidden'
+      const timer = window.setTimeout(() => {
+        sheetRef.current?.querySelector<HTMLElement>(focusableSelector)?.focus()
+      }, 60)
+      return () => {
+        window.clearTimeout(timer)
+        root.style.overflow = ''
+      }
+    }
+    if (wasOpen.current) {
+      wasOpen.current = false
       menuButtonRef.current?.focus()
     }
-    return () => {
-      document.body.style.overflow = ''
-    }
   }, [isOpen])
+
+  const closeServices = useCallback((returnFocus = false) => {
+    setServicesOpen(false)
+    if (returnFocus) servicesButtonRef.current?.focus()
+  }, [])
 
   useEffect(() => {
     const handleKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
-        setIsOpen(false)
-        setServicesOpen(false)
+        if (servicesOpen) closeServices(true)
+        if (isOpen) setIsOpen(false)
+        return
+      }
+
+      // Keep keyboard focus inside the header while the mobile sheet is open.
+      if (event.key === 'Tab' && isOpen && headerRef.current) {
+        const focusables = Array.from(
+          headerRef.current.querySelectorAll<HTMLElement>(focusableSelector)
+        ).filter((element) => element.getClientRects().length > 0)
+        if (focusables.length === 0) return
+        const first = focusables[0]
+        const last = focusables[focusables.length - 1]
+        if (event.shiftKey && document.activeElement === first) {
+          event.preventDefault()
+          last.focus()
+        } else if (!event.shiftKey && document.activeElement === last) {
+          event.preventDefault()
+          first.focus()
+        }
       }
     }
 
@@ -75,196 +130,296 @@ export default function Navbar() {
       window.removeEventListener('keydown', handleKey)
       window.removeEventListener('pointerdown', handlePointer)
     }
-  }, [])
+  }, [closeServices, isOpen, servicesOpen])
+
+  const openServicesWithIntent = () => {
+    if (!hasFinePointer()) return
+    window.clearTimeout(hoverTimer.current)
+    hoverTimer.current = window.setTimeout(() => setServicesOpen(true), 70)
+  }
+
+  const closeServicesWithIntent = () => {
+    if (!hasFinePointer()) return
+    window.clearTimeout(hoverTimer.current)
+    hoverTimer.current = window.setTimeout(() => setServicesOpen(false), 160)
+  }
+
+  const servicesActive = isLinkActive(pathname, '/services')
 
   return (
     <header
-      className={`sticky top-0 z-50 border-b backdrop-blur-xl transition-all duration-300 ${
-        scrolled
-          ? 'border-[var(--line)] bg-white/94 shadow-[0_12px_34px_rgba(0,8,20,0.08)]'
-          : 'border-transparent bg-white/78'
-      }`}
       ref={headerRef}
+      className="pointer-events-none fixed inset-x-0 top-0 z-50"
+      onFocusCapture={() => setHidden(false)}
     >
       <a
         href="#main"
-        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[60] focus:rounded-full focus:bg-[var(--brand-secondary)] focus:px-4 focus:py-2 focus:text-sm focus:font-bold focus:text-white"
+        className="pointer-events-auto sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[80] focus:rounded-full focus:bg-[var(--brand-primary)] focus:px-5 focus:py-3 focus:text-sm focus:font-bold focus:text-[var(--brand-secondary)]"
       >
         Skip to content
       </a>
-      <div>
-        <nav className="mx-auto flex min-h-[78px] max-w-7xl items-center justify-between gap-5 px-4 sm:px-6 lg:px-8">
-          <Link href="/" className="flex min-w-0 items-center gap-3" aria-label="HAAK Solutions home">
-            <Image src="/logo3.png" alt="HAAK Solutions logo mark" width={46} height={46} className="h-11 w-11 object-contain" priority />
-            <span className="min-w-0">
-              <span className="block font-display text-base font-extrabold leading-tight text-[var(--text-primary)] sm:text-lg">
-                {companyInfo.name}
-              </span>
-              <span className="block truncate text-xs font-medium text-[var(--text-soft)]">
+
+      <m.div
+        aria-hidden="true"
+        className="fixed inset-x-0 top-0 z-[60] h-[2px] origin-left bg-gradient-to-r from-[var(--brand-primary)] to-[var(--brand-accent)]"
+        style={{ scaleX: reduceMotion ? scrollYProgress : progress }}
+      />
+
+      <m.div
+        className="relative z-20 px-3 pt-3 sm:px-5 sm:pt-4"
+        animate={{ y: hidden && !isOpen ? '-130%' : '0%' }}
+        transition={{ duration: duration.base, ease: ease.out }}
+      >
+        <nav
+          aria-label="Primary"
+          className={`nav-shell pointer-events-auto relative mx-auto flex h-16 max-w-[1240px] items-center justify-between gap-3 rounded-full pl-2 pr-2 ${
+            scrolled || isOpen ? 'is-scrolled' : ''
+          }`}
+        >
+          <Link href="/" className="group flex min-w-0 items-center gap-3 rounded-full py-1 pl-1 pr-3" aria-label="HAAK Solutions home">
+            <span className="logo-tile h-11 w-11 rounded-full transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:rotate-[-8deg]">
+              <Image src="/logo3.png" alt="" width={30} height={30} className="h-[30px] w-[30px] object-contain" priority />
+            </span>
+            <span className="min-w-0 leading-tight">
+              <span className="block font-display text-[0.98rem] font-bold tracking-[-0.02em] text-white">{companyInfo.name}</span>
+              <span className="hidden truncate text-[0.72rem] font-medium text-white/60 sm:block">
                 Software, product, web and growth
               </span>
             </span>
           </Link>
 
-          <div className="hidden items-center gap-1 lg:flex">
-            <div
+          <ul className="hidden items-center gap-0.5 lg:flex">
+            <li
               className="relative"
-              onMouseEnter={() => setServicesOpen(true)}
-              onMouseLeave={() => setServicesOpen(false)}
+              onPointerEnter={openServicesWithIntent}
+              onPointerLeave={closeServicesWithIntent}
             >
               <button
+                ref={servicesButtonRef}
                 type="button"
-                className={`rounded-full px-4 py-2 text-sm font-bold transition ${
-                  isLinkActive(currentPath, '/services')
-                    ? 'bg-[var(--surface-soft)] text-[var(--brand-primary-hover)]'
-                    : 'text-[var(--text-soft)] hover:bg-[var(--surface-soft)] hover:text-[var(--text-primary)]'
-                }`}
-                onClick={() => setServicesOpen((open) => !open)}
+                className="nav-link"
                 aria-expanded={servicesOpen}
-                aria-haspopup="true"
+                aria-controls={megaId}
+                onClick={() => setServicesOpen((open) => !open)}
               >
-                Services
+                {servicesActive && <ActivePill />}
+                <span className="nav-link-label">Services</span>
+                <m.span animate={{ rotate: servicesOpen ? 180 : 0 }} transition={{ duration: duration.fast }}>
+                  <ChevronDownIcon />
+                </m.span>
               </button>
+
               <AnimatePresence>
                 {servicesOpen && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: 10 }}
-                    transition={{ duration: 0.16 }}
-                    className="absolute left-0 top-full mt-3 w-[560px] rounded-2xl border border-[var(--line)] bg-white p-4 shadow-[0_24px_70px_rgba(0,8,20,0.14)]"
-                  >
-                    <div className="grid grid-cols-2 gap-2">
-                      {services.map((service) => (
-                        <Link
-                          key={service.href}
-                          href={service.href}
-                          className="rounded-xl p-3 transition hover:bg-[var(--bg-soft)]"
-                        >
-                          <span className="block text-sm font-extrabold text-[var(--text-primary)]">
-                            {service.shortTitle}
-                          </span>
-                          <span className="mt-1 block text-xs leading-relaxed text-[var(--text-soft)]">
-                            {service.description}
-                          </span>
-                        </Link>
-                      ))}
-                    </div>
-                    <Link
-                      href="/services"
-                      className="mt-3 inline-flex rounded-full bg-[var(--brand-primary-hover)] px-4 py-2 text-sm font-bold text-white"
+                  <div className="absolute left-1/2 top-full z-30 w-[min(760px,calc(100vw-3rem))] -translate-x-1/2 pt-4">
+                    <m.div
+                      id={megaId}
+                      initial={{ opacity: 0, y: 8, scale: 0.98 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: 6, scale: 0.98, transition: { duration: duration.instant } }}
+                      transition={{ duration: duration.fast, ease: ease.out }}
+                      className="theme-dark origin-top overflow-hidden rounded-[26px] border border-white/10 !bg-[#030f1c]/95 p-3 shadow-[0_30px_80px_-20px_rgba(0,0,0,0.7)] backdrop-blur-xl"
                     >
-                      View all services
-                    </Link>
-                  </motion.div>
+                      <div className="grid grid-cols-[1fr_1fr_0.9fr] gap-1">
+                        <ul className="col-span-2 grid grid-cols-2 gap-1">
+                          {services.map((service) => {
+                            const active = isLinkActive(pathname, service.href)
+                            return (
+                              <li key={service.href}>
+                                <Link
+                                  href={service.href}
+                                  aria-current={active ? 'page' : undefined}
+                                  className={`group flex gap-3 rounded-2xl p-3 transition-colors hover:bg-white/[0.06] focus-visible:bg-white/[0.06] ${
+                                    active ? 'bg-white/[0.06]' : ''
+                                  }`}
+                                >
+                                  <span className="icon-tile h-10 w-10 rounded-xl">{service.icon}</span>
+                                  <span>
+                                    <span className="block text-sm font-bold text-white">{service.shortTitle}</span>
+                                    <span className="mt-0.5 line-clamp-2 block text-xs leading-relaxed text-white/60">
+                                      {service.pillar}
+                                    </span>
+                                  </span>
+                                </Link>
+                              </li>
+                            )
+                          })}
+                        </ul>
+                        <div className="relative flex flex-col justify-between overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-[#0077b6]/30 via-transparent to-transparent p-5">
+                          <div>
+                            <p className="t-label">Services</p>
+                            <p className="mt-3 text-sm leading-relaxed text-white/70">
+                              Software, product design, digital growth and IT services in one delivery system.
+                            </p>
+                          </div>
+                          <Link href="/services" className="link-underline mt-6 text-sm text-white">
+                            View all services
+                            <ArrowRightIcon />
+                          </Link>
+                        </div>
+                      </div>
+                    </m.div>
+                  </div>
                 )}
               </AnimatePresence>
-            </div>
+            </li>
 
-            {navLinks.slice(1).map((link) => {
-              const active = isLinkActive(currentPath, link.href)
+            {navLinks.map((link) => {
+              const active = isLinkActive(pathname, link.href)
               return (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  className={`relative rounded-full px-4 py-2 text-sm font-bold transition ${
-                    active
-                      ? 'bg-[var(--surface-soft)] text-[var(--brand-primary-hover)]'
-                      : 'text-[var(--text-soft)] hover:bg-[var(--surface-soft)] hover:text-[var(--text-primary)]'
-                  }`}
-                >
-                  {link.label}
-                  {active && (
-                    <motion.span
-                      layoutId="nav-active-pill"
-                      className="absolute inset-x-4 -bottom-1 h-0.5 rounded-full bg-[var(--brand-accent)]"
-                    />
-                  )}
-                </Link>
+                <li key={link.href}>
+                  <Link href={link.href} className="nav-link" aria-current={active ? 'page' : undefined}>
+                    {active && <ActivePill />}
+                    <span className="nav-link-label">{link.label}</span>
+                  </Link>
+                </li>
               )
             })}
-          </div>
+          </ul>
 
-          <div className="flex items-center gap-3">
-            <Link href="/contact" className="button-primary hidden lg:inline-flex">
-              Start a Project
-              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M17.25 8.25L21 12m0 0l-3.75 3.75M21 12H3" />
-              </svg>
-            </Link>
+          <div className="flex items-center gap-2">
+            <Magnetic className="hidden sm:inline-flex">
+              <Link href="/contact" className="btn-primary min-h-11 px-5 py-2.5 text-sm">
+                Start a Project
+                <ArrowRightIcon />
+              </Link>
+            </Magnetic>
             <button
               ref={menuButtonRef}
-              className="flex h-11 w-11 items-center justify-center rounded-full border border-[var(--line)] bg-white text-[var(--text-primary)] transition hover:bg-[var(--bg-soft)] lg:hidden"
+              type="button"
+              className="relative flex h-12 w-12 items-center justify-center rounded-full border border-white/15 bg-white/[0.04] text-white transition-colors hover:bg-white/10 lg:hidden"
               onClick={() => setIsOpen((open) => !open)}
               aria-label={isOpen ? 'Close menu' : 'Open menu'}
               aria-expanded={isOpen}
+              aria-controls={sheetId}
             >
-              <span className="flex w-5 flex-col gap-1.5">
-                <span className={`h-0.5 rounded-full bg-current transition ${isOpen ? 'translate-y-2 rotate-45' : ''}`} />
-                <span className={`h-0.5 rounded-full bg-current transition ${isOpen ? 'opacity-0' : ''}`} />
-                <span className={`h-0.5 rounded-full bg-current transition ${isOpen ? '-translate-y-2 -rotate-45' : ''}`} />
+              <span className="relative block h-3 w-5" aria-hidden="true">
+                <m.span
+                  className="absolute left-0 top-0 block h-[2px] w-5 rounded-full bg-current"
+                  animate={isOpen ? { y: 5, rotate: 45 } : { y: 0, rotate: 0 }}
+                  transition={spring.snappy}
+                />
+                <m.span
+                  className="absolute bottom-0 left-0 block h-[2px] w-5 rounded-full bg-current"
+                  animate={isOpen ? { y: -5, rotate: -45 } : { y: 0, rotate: 0 }}
+                  transition={spring.snappy}
+                />
               </span>
             </button>
           </div>
         </nav>
-      </div>
+      </m.div>
 
       <AnimatePresence>
         {isOpen && (
-          <motion.div
-            ref={drawerRef}
+          <m.div
+            ref={sheetRef}
+            id={sheetId}
+            className="theme-dark pointer-events-auto fixed inset-0 z-10 overflow-y-auto lg:hidden"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.18 }}
-            className="fixed inset-x-0 top-[79px] z-40 h-[calc(100vh-79px)] overflow-y-auto border-t border-[var(--line)] bg-white px-4 py-5 lg:hidden"
+            exit={{ opacity: 0, transition: { duration: duration.fast, ease: ease.in } }}
+            transition={{ duration: duration.base, ease: ease.out }}
           >
-            <div className="mx-auto max-w-lg">
-              <div className="rounded-2xl bg-[var(--bg-soft)] p-4">
-                <p className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--brand-primary-hover)]">
-                  Services
-                </p>
-                <div className="mt-3 grid gap-2">
-                  {services.map((service) => (
-                    <motion.div
-                      key={service.href}
-                      initial={{ opacity: 0, y: 8 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.18 }}
+            <div className="grid-lines" aria-hidden="true" />
+            <div aria-hidden="true" className="glow-orb glow-cyan -right-40 -top-40 h-[28rem] w-[28rem]" />
+            <m.nav
+              aria-label="Mobile"
+              className="relative flex min-h-full flex-col px-5 pb-8 pt-28 sm:px-8"
+              initial="hidden"
+              animate="visible"
+              variants={{ visible: { transition: { staggerChildren: stagger.tight, delayChildren: 0.06 } } }}
+            >
+              <ul className="border-t border-white/10">
+                {mobileLinks.map((link, index) => {
+                  const active = isLinkActive(pathname, link.href)
+                  return (
+                    <m.li
+                      key={link.href}
+                      className="border-b border-white/10"
+                      variants={{
+                        hidden: { opacity: 0, y: 24 },
+                        visible: { opacity: 1, y: 0, transition: { duration: duration.slow, ease: ease.expo } },
+                      }}
                     >
                       <Link
-                        href={service.href}
-                        className="block rounded-xl bg-white p-3 text-sm font-bold text-[var(--text-primary)]"
+                        href={link.href}
+                        aria-current={active ? 'page' : undefined}
+                        className="group flex min-h-[4.25rem] items-center justify-between gap-4 py-3"
                       >
-                        {service.title}
+                        <span className="flex items-baseline gap-4">
+                          <span className="index-num">{String(index + 1).padStart(2, '0')}</span>
+                          <span
+                            className={`font-display text-[2rem] font-bold leading-none tracking-[-0.03em] ${
+                              active ? 'text-[var(--brand-primary)]' : 'text-white'
+                            }`}
+                          >
+                            {link.label}
+                          </span>
+                        </span>
+                        <ArrowUpRightIcon className="h-5 w-5 text-white/50 transition-transform duration-300 group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
                       </Link>
-                    </motion.div>
+                    </m.li>
+                  )
+                })}
+              </ul>
+
+              <m.div
+                className="mt-8"
+                variants={{
+                  hidden: { opacity: 0, y: 16 },
+                  visible: { opacity: 1, y: 0, transition: { duration: duration.slow, ease: ease.out } },
+                }}
+              >
+                <p className="t-label">Services</p>
+                <ul className="mt-4 flex flex-wrap gap-2">
+                  {services.map((service) => (
+                    <li key={service.href}>
+                      <Link
+                        href={service.href}
+                        aria-current={isLinkActive(pathname, service.href) ? 'page' : undefined}
+                        className="chip min-h-10 text-white/80 aria-[current=page]:border-[var(--brand-primary)] aria-[current=page]:text-white"
+                      >
+                        {service.shortTitle}
+                      </Link>
+                    </li>
                   ))}
-                </div>
-              </div>
+                </ul>
+              </m.div>
 
-              <div className="mt-4 grid gap-2">
-                {navLinks.slice(1).map((link) => (
-                  <Link
-                    key={link.href}
-                    href={link.href}
-                    className="flex items-center justify-between rounded-2xl border border-[var(--line)] px-4 py-4 text-base font-bold text-[var(--text-primary)]"
-                  >
-                    {link.label}
-                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 5.25L15.75 12 9 18.75" />
-                    </svg>
-                  </Link>
-                ))}
-              </div>
-
-              <Link href="/contact" className="button-primary mt-5 w-full">
-                Start a Project
-              </Link>
-            </div>
-          </motion.div>
+              <m.div
+                className="mt-auto grid gap-3 pt-10 sm:grid-cols-2"
+                variants={{
+                  hidden: { opacity: 0, y: 16 },
+                  visible: { opacity: 1, y: 0, transition: { duration: duration.slow, ease: ease.out } },
+                }}
+              >
+                <Link href="/contact" className="btn-primary btn-lg w-full">
+                  Start a Project
+                  <ArrowRightIcon />
+                </Link>
+                <a href={whatsappLinks.default} target="_blank" rel="noopener noreferrer" className="btn-secondary btn-lg w-full">
+                  WhatsApp HAAK
+                </a>
+                <a href={`mailto:${companyInfo.email}`} className="pt-2 text-center text-sm text-white/70 sm:col-span-2">
+                  {companyInfo.email}
+                </a>
+              </m.div>
+            </m.nav>
+          </m.div>
         )}
       </AnimatePresence>
     </header>
+  )
+}
+
+function ActivePill() {
+  return (
+    <m.span
+      layoutId="nav-active-pill"
+      aria-hidden="true"
+      className="absolute inset-0 -z-10 rounded-full border border-white/10 bg-white/[0.08]"
+      transition={spring.snappy}
+    />
   )
 }

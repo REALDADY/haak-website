@@ -1,8 +1,12 @@
 'use client'
 
 import Link from 'next/link'
-import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
-import { useState } from 'react'
+import { AnimatePresence, m } from 'framer-motion'
+import { useId, useRef, useState, type KeyboardEvent } from 'react'
+import SectionHeading from '@/components/ui/SectionHeading'
+import { Reveal } from '@/components/motion/Reveal'
+import { ArrowRightIcon } from '@/components/icons'
+import { duration, ease, hasFinePointer, spring, stagger } from '@/lib/motion'
 
 const capabilities = [
   {
@@ -43,80 +47,159 @@ const capabilities = [
   },
 ]
 
-function ArrowIcon() {
-  return (
-    <svg className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M17.25 8.25L21 12m0 0l-3.75 3.75M21 12H3" />
-    </svg>
-  )
-}
-
 export default function InteractiveServices() {
-  const reduceMotion = useReducedMotion()
   const [activeIndex, setActiveIndex] = useState(0)
+  const tabRefs = useRef<Array<HTMLButtonElement | null>>([])
+  const baseId = useId()
   const active = capabilities[activeIndex]
 
-  return (
-    <section id="capabilities" className="capability-system bg-[var(--bg)] px-4 py-20 sm:px-6 lg:px-8 lg:py-28">
-      <div className="mx-auto max-w-7xl">
-        <div className="section-kicker">Capabilities</div>
-        <div className="grid gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:items-end">
-          <h2 className="max-w-4xl font-display text-[clamp(2.35rem,4.4vw,4.8rem)] font-extrabold leading-[0.98] text-[var(--text-primary)]">
-            Software capability across product, platform and operations.
-          </h2>
-          <p className="max-w-2xl text-xl leading-relaxed text-[var(--text-soft)]">
-            HAAK combines strategy, interface design, engineering and support so digital work can become a usable system, not a disconnected set of pages.
-          </p>
-        </div>
+  const focusTab = (index: number) => {
+    const next = (index + capabilities.length) % capabilities.length
+    setActiveIndex(next)
+    tabRefs.current[next]?.focus()
+  }
 
-        <div className="capability-layout mt-14">
-          <div className="capability-index" role="tablist" aria-label="HAAK capabilities">
+  const handleKeyDown = (event: KeyboardEvent<HTMLButtonElement>, index: number) => {
+    const keys: Record<string, () => void> = {
+      ArrowDown: () => focusTab(index + 1),
+      ArrowRight: () => focusTab(index + 1),
+      ArrowUp: () => focusTab(index - 1),
+      ArrowLeft: () => focusTab(index - 1),
+      Home: () => focusTab(0),
+      End: () => focusTab(capabilities.length - 1),
+    }
+    const action = keys[event.key]
+    if (action) {
+      event.preventDefault()
+      action()
+    }
+  }
+
+  return (
+    <section id="capabilities" className="section surface-soft overflow-hidden">
+      <div className="grid-lines-light" aria-hidden="true" />
+      <div className="container-x relative">
+        <SectionHeading
+          align="split"
+          eyebrow="Capabilities"
+          title="Software capability across product, platform and operations."
+          intro="HAAK combines strategy, interface design, engineering and support so digital work can become a usable system, not a disconnected set of pages."
+        />
+
+        <Reveal className="mt-14 grid overflow-hidden rounded-[var(--radius-xl)] border border-[var(--line)] bg-white shadow-[var(--shadow-md)] lg:grid-cols-[0.85fr_1.15fr]">
+          <div
+            role="tablist"
+            aria-label="HAAK capabilities"
+            aria-orientation="vertical"
+            className="flex gap-2 overflow-x-auto border-b border-[var(--line)] p-3 [scrollbar-width:none] lg:flex-col lg:gap-0 lg:overflow-visible lg:border-b-0 lg:border-r lg:p-4 [&::-webkit-scrollbar]:hidden"
+          >
             {capabilities.map((capability, index) => {
               const selected = activeIndex === index
               return (
                 <button
                   key={capability.name}
+                  ref={(node) => {
+                    tabRefs.current[index] = node
+                  }}
+                  id={`${baseId}-tab-${index}`}
                   type="button"
                   role="tab"
                   aria-selected={selected}
-                  aria-controls="capability-panel"
-                  onPointerEnter={() => setActiveIndex(index)}
-                  onFocus={() => setActiveIndex(index)}
+                  aria-controls={`${baseId}-panel`}
+                  tabIndex={selected ? 0 : -1}
+                  onPointerEnter={() => hasFinePointer() && setActiveIndex(index)}
                   onClick={() => setActiveIndex(index)}
-                  className={`capability-index-item ${selected ? 'is-active' : ''}`}
+                  onKeyDown={(event) => handleKeyDown(event, index)}
+                  className={`relative z-0 flex min-h-12 shrink-0 items-center gap-4 rounded-2xl px-4 py-3 text-left transition-colors duration-300 lg:min-h-[4.25rem] lg:px-5 ${
+                    selected ? 'text-[var(--text-primary)]' : 'text-[var(--text-faint)] hover:text-[var(--text-primary)]'
+                  }`}
                 >
-                  <span>{String(index + 1).padStart(2, '0')}</span>
-                  <strong>{capability.name}</strong>
+                  {selected && (
+                    <m.span
+                      layoutId={`${baseId}-capability-indicator`}
+                      aria-hidden="true"
+                      className="absolute inset-0 -z-10 rounded-2xl border border-[color-mix(in_srgb,var(--brand-primary)_30%,transparent)] bg-[var(--surface-soft)]"
+                      transition={spring.snappy}
+                    >
+                      <span className="absolute bottom-3 left-0 top-3 hidden w-[3px] rounded-full bg-[var(--brand-primary)] lg:block" />
+                    </m.span>
+                  )}
+                  <span className="index-num hidden lg:inline">{String(index + 1).padStart(2, '0')}</span>
+                  <span className="whitespace-nowrap font-display text-[0.95rem] font-semibold tracking-[-0.01em] lg:whitespace-normal lg:text-[1.2rem]">
+                    {capability.name}
+                  </span>
                 </button>
               )
             })}
           </div>
 
-          <div id="capability-panel" className="capability-detail" role="tabpanel">
-            <AnimatePresence mode="wait">
-              <motion.div
+          <div
+            id={`${baseId}-panel`}
+            role="tabpanel"
+            aria-labelledby={`${baseId}-tab-${activeIndex}`}
+            className="relative min-h-[26rem] overflow-hidden p-7 sm:p-10 lg:p-14"
+          >
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-[radial-gradient(circle,rgba(0,180,216,0.14),transparent_65%)]"
+            />
+            <AnimatePresence mode="wait" initial={false}>
+              <m.div
                 key={active.name}
-                initial={false}
-                animate={{ opacity: 1, y: 0 }}
-                exit={reduceMotion ? undefined : { opacity: 0, y: -12 }}
-                transition={{ duration: 0.22 }}
+                initial="hidden"
+                animate="visible"
+                exit="exit"
+                variants={{
+                  hidden: {},
+                  visible: { transition: { staggerChildren: stagger.tight } },
+                  exit: { opacity: 0, transition: { duration: duration.instant } },
+                }}
+                className="relative"
               >
-                <span className="capability-detail-label">Active capability</span>
-                <h3>{active.name}</h3>
-                <p>{active.summary}</p>
-                <div className="capability-layers">
-                  {active.layers.map((layer) => (
-                    <span key={layer}>{layer}</span>
+                <m.p
+                  variants={{ hidden: { opacity: 0, y: 10 }, visible: { opacity: 1, y: 0, transition: { duration: duration.base, ease: ease.out } } }}
+                  className="t-label"
+                >
+                  {String(activeIndex + 1).padStart(2, '0')} / {String(capabilities.length).padStart(2, '0')}
+                </m.p>
+                <m.h3
+                  variants={{ hidden: { opacity: 0, y: 16 }, visible: { opacity: 1, y: 0, transition: { duration: duration.slow, ease: ease.expo } } }}
+                  className="mt-5 max-w-[16ch] font-display text-[clamp(2rem,4vw,3.4rem)] font-bold leading-[1.02] tracking-[-0.035em] text-[var(--text-primary)]"
+                >
+                  {active.name}
+                </m.h3>
+                <m.p
+                  variants={{ hidden: { opacity: 0, y: 12 }, visible: { opacity: 1, y: 0, transition: { duration: duration.slow, ease: ease.out } } }}
+                  className="t-lead mt-5 max-w-xl"
+                >
+                  {active.summary}
+                </m.p>
+                <ul className="mt-8 grid gap-2.5 sm:grid-cols-3">
+                  {active.layers.map((layer, index) => (
+                    <m.li
+                      key={layer}
+                      variants={{ hidden: { opacity: 0, y: 12 }, visible: { opacity: 1, y: 0, transition: { duration: duration.base, ease: ease.out } } }}
+                      className="rounded-2xl border border-[var(--line)] bg-[var(--bg-soft)] px-4 py-4"
+                    >
+                      <span className="index-num">{`L${index + 1}`}</span>
+                      <span className="mt-2 block text-sm font-bold text-[var(--text-primary)]">{layer}</span>
+                    </m.li>
                   ))}
-                </div>
-                <Link href={active.href} className="button-primary group mt-8 w-fit">
-                  Explore service
-                  <ArrowIcon />
-                </Link>
-              </motion.div>
+                </ul>
+                <m.div
+                  variants={{ hidden: { opacity: 0 }, visible: { opacity: 1, transition: { duration: duration.base } } }}
+                  className="mt-10"
+                >
+                  <Link href={active.href} className="btn-primary">
+                    Explore service
+                    <span className="sr-only">: {active.name}</span>
+                    <ArrowRightIcon />
+                  </Link>
+                </m.div>
+              </m.div>
             </AnimatePresence>
           </div>
-        </div>
+        </Reveal>
       </div>
     </section>
   )
