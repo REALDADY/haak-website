@@ -8,6 +8,13 @@ const legacyRedirects: Record<string, string> = {
   Contact: '/contact',
 }
 
+// Static export: prebuild only the known legacy URLs; anything else is a 404.
+export const dynamicParams = false
+
+export function generateStaticParams() {
+  return Object.keys(legacyRedirects).map((legacy) => ({ legacy }))
+}
+
 type LegacyPageProps = {
   params: { legacy: string }
 }
