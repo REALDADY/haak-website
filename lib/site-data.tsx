@@ -53,7 +53,7 @@ export const founders = [
   {
     id: 'https://real3adi.space/#person',
     name: 'Mohamed Amin',
-    alternateName: 'real3adi',
+    alternateName: ['real3adi', 'Mohamed Amin Jbari', 'محمد امين اجباري'],
     displayName: 'Mohamed Amin (real3adi)',
     role: 'Co-founder',
     bio: 'Co-founder of HAAK Solutions. A Dubai-based designer and full-stack developer who designs websites and product interfaces, builds the apps and APIs behind them, and runs the infrastructure they depend on.',
