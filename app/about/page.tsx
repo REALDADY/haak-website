@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import Image from 'next/image'
 import Link from 'next/link'
 import PageHero from '@/components/ui/PageHero'
 import SectionHeading from '@/components/ui/SectionHeading'
@@ -12,6 +13,7 @@ import {
   companyInfo,
   differentiators,
   disciplineLeads,
+  founders,
 } from '@/lib/site-data'
 
 export const metadata: Metadata = {
@@ -80,6 +82,50 @@ export default function AboutPage() {
                     <h3 className="t-h3 mt-6">{item.title}</h3>
                     <p className="t-body mt-3">{item.description}</p>
                   </Spotlight>
+                </RevealItem>
+              ))}
+            </RevealGroup>
+          </div>
+        </div>
+      </section>
+
+      <section className="section surface-soft">
+        <div className="container-x">
+          <div className="grid gap-12 lg:grid-cols-[0.85fr_1.15fr] lg:gap-20">
+            <SectionHeading
+              eyebrow="Founding team"
+              title="The people behind HAAK Solutions."
+              className="lg:sticky lg:top-32 lg:self-start"
+            />
+
+            <RevealGroup as="ul" className="grid gap-4">
+              {founders.map((person) => (
+                <RevealItem as="li" key={person.id}>
+                  <article className="card card-elevated flex flex-col gap-6 p-7 sm:flex-row sm:items-center">
+                    <Image
+                      src={person.image}
+                      alt={`Portrait of ${person.displayName}, ${person.role.toLowerCase()} of HAAK Solutions`}
+                      width={720}
+                      height={960}
+                      className="h-40 w-[7.5rem] shrink-0 rounded-2xl object-cover"
+                    />
+                    <div>
+                      <p className="t-label">{person.role}</p>
+                      <h3 className="t-h3 mt-2">
+                        {person.displayName}
+                      </h3>
+                      <p className="t-body mt-3">{person.bio}</p>
+                      <ul className="mt-5 flex flex-wrap gap-x-5 gap-y-2 text-sm font-semibold">
+                        {person.links.map((link) => (
+                          <li key={link.href}>
+                            <a href={link.href} target="_blank" rel="noopener noreferrer" className="underline decoration-[var(--brand-accent)] underline-offset-4">
+                              {link.label}
+                            </a>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </article>
                 </RevealItem>
               ))}
             </RevealGroup>

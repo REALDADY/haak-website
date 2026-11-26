@@ -45,6 +45,34 @@ export const companyInfo = {
   ],
 }
 
+/**
+ * HAAK founding team. The person @id matches the canonical profile on
+ * real3adi.space, so search engines connect both sites to the same person.
+ */
+export const founders = [
+  {
+    id: 'https://real3adi.space/#person',
+    name: 'Mohamed Amin',
+    alternateName: 'real3adi',
+    displayName: 'Mohamed Amin (real3adi)',
+    role: 'Co-founder',
+    bio: 'Co-founder of HAAK Solutions. A Dubai-based designer and full-stack developer who designs websites and product interfaces, builds the apps and APIs behind them, and runs the infrastructure they depend on.',
+    image: '/mohamed-amin-real3adi.jpg',
+    url: 'https://real3adi.space/',
+    sameAs: [
+      'https://real3adi.space/',
+      'https://www.linkedin.com/in/mohamed-amin-jbari-223237364/',
+      'https://www.instagram.com/real3adi/',
+      'https://github.com/REALDADY',
+    ],
+    links: [
+      { label: 'real3adi.space', href: 'https://real3adi.space/' },
+      { label: 'LinkedIn', href: 'https://www.linkedin.com/in/mohamed-amin-jbari-223237364/' },
+      { label: 'Instagram', href: 'https://www.instagram.com/real3adi/' },
+    ],
+  },
+]
+
 export const whatsappLinks = {
   default: `${companyInfo.whatsappUrl}?text=${encodeURIComponent(
     "Hi HAAK Solutions, I'd like to discuss a project."

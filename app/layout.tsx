@@ -7,7 +7,7 @@ import WhatsAppFloat from '@/components/WhatsAppFloat'
 import Preloader from '@/components/Preloader'
 import MotionProvider from '@/components/motion/MotionProvider'
 import { introScript } from '@/lib/intro'
-import { companyInfo } from '@/lib/site-data'
+import { companyInfo, founders } from '@/lib/site-data'
 
 const manrope = Manrope({
   subsets: ['latin'],
@@ -103,6 +103,16 @@ const structuredData = {
   priceRange: '$$',
   areaServed: ['Dubai', 'Abu Dhabi', 'Sharjah', 'UAE'],
   sameAs: companyInfo.socialLinks.map((link) => link.href),
+  founder: founders.map((person) => ({
+    '@type': 'Person',
+    '@id': person.id,
+    name: person.name,
+    alternateName: person.alternateName,
+    jobTitle: person.role,
+    url: person.url,
+    image: `${companyInfo.siteUrl}${person.image}`,
+    sameAs: person.sameAs,
+  })),
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
